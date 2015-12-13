@@ -351,9 +351,6 @@ void Hybrid_tile_QR
 #  if defined(CRAYJ_TIMELINE)
         printf("CRAYJ:   CRAYJ_TIMELINE\n");
 #  endif
-#  if defined(CRAYJ_USE_OMP_FLUSH)
-        printf("CRAYJ:   CRAYJ_USE_OMP_FLUSH\n");
-#  endif
 #  if defined(CRAYJ_DYNAMIC_COMM_SCHED)
         printf("CRAYJ:   CRAYJ_DYNAMIC_COMM_SCHED\n");
 #  endif
@@ -880,11 +877,7 @@ void Hybrid_tile_QR
 
 #pragma omp critical (endflag)
                 run_flag = 0;
-#if defined(CRAYJ_USE_OMP_FLUSH)
-//crayj<<<
-#pragma omp flush
-//crayj>>>
-#endif
+
 #if defined(CRAYJ_TIMELINE)
 //crayj>>>
                 if (NULL != timeline)
@@ -1045,11 +1038,7 @@ void Hybrid_tile_QR
                             {
 #pragma omp critical (endflag)
                                 run_flag = 0;
-#if defined(CRAYJ_USE_OMP_FLUSH)
-//crayj>>>
-#pragma omp flush
-//crayj<<<
-#endif
+
 #if defined(CRAYJ_TIMELINE)
 //crayj>>>
                                 if (NULL != timeline)
@@ -1455,11 +1444,6 @@ void Hybrid_tile_QR
                     // 終了判定
 #pragma omp critical (endflag)
                     {
-#if defined(CRAYJ_USE_OMP_FLUSH)
-//crayj>>>
-#pragma omp flush
-//crayj<<<
-#endif
                         my_flag = run_flag;
                     }
 #if defined(CRAYJ_TIMELINE)
