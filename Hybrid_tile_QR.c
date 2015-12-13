@@ -64,7 +64,7 @@ static int n_send, n_recv;
 #  pragma omp threadprivate(ela_send,ela_recv,n_send,n_recv)
 //crayj<<<
 #endif
-#if defined(CRAYJ_TIMELINE) || defined(CRAYJ_TIMING_FILE_PER_RANK)
+#if defined(CRAYJ_TIMELINE)
 #  define CRAYJ_FILENAME_MAX 128
 #endif
 
@@ -377,9 +377,6 @@ void Hybrid_tile_QR
         printf("CRAYJ:   CRAYJ_VERBOSE\n");
 #  if defined(CRAYJ_TIMING)
         printf("CRAYJ:   CRAYJ_TIMING\n");
-#  endif
-#  if defined(CRAYJ_TIMING_FILE_PER_RANK)
-        printf("CRAYJ:   CRAYJ_TIMING_FILE_PER_RANK\n");
 #  endif
 #  if defined(CRAYJ_TIMELINE)
         printf("CRAYJ:   CRAYJ_TIMELINE\n");
@@ -1716,38 +1713,24 @@ void Hybrid_tile_QR
 #if defined(CRAYJ_TIMING)
 //crayj>>>
     {   FILE *fp;
-#  if defined(CRAYJ_TIMING_FILE_PER_RANK)
-	char filename[CRAYJ_FILENAME_MAX];
-	snprintf(filename, CRAYJ_FILENAME_MAX, 
-                 "crayj_timing_%05d.txt", my_rank);
-	fp = fopen(filename, "w");
-	if (NULL == fp) {
-            fprintf(stderr, "CRAYJ[%d]: "
-                    "WARNING: file open failed: filename == %s\n",
-                    my_rank, filename);
-            fprintf(stderr, "CRAYJ[%d]: "
-                    "WARNING: timing output disabled.\n",
-                    my_rank);
-	}
-#  else
 	if (my_rank == 0) {
             fprintf(stderr, "CRAYJ[%d]: REMARK: "
                     "timing info output to stdout.\n",
                     my_rank);
 	}
 	fp = stdout;
-#  endif
+
 	if (NULL != fp) {
             tag = 100;
-#  if ! defined(CRAYJ_TIMING_FILE_PER_RANK)
+
             if (my_rank == 0) {
-#  endif
+
                 fprintf(fp, "CRAYJ:[%5d] Kernel Timing [sec.]\n", my_rank);
                 fprintf(fp, "CRAYJ:, %6s, %3s, %10s, %10s, %10s, %10s, %10s, %10s\n",
                         "rank", "tid", "GEQRT", "TSQRT", "LARFB", "SSRFB", "TASKWAIT", "TOTAL");
-#  if ! defined(CRAYJ_TIMING_FILE_PER_RANK)
+
             }
-#  endif
+
             if (my_rank != 0) {
                 MPI_Recv(&dummy, 1, MPI_INT, my_rank-1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
@@ -1763,16 +1746,14 @@ void Hybrid_tile_QR
                 MPI_Send(&dummy, 1, MPI_INT, my_rank+1, tag, MPI_COMM_WORLD);
             }
             MPI_Barrier(MPI_COMM_WORLD);
-#  if ! defined(CRAYJ_TIMING_FILE_PER_RANK)
+
             if (my_rank == 0) {
-#  endif
                 fputc('\n', fp);
                 fprintf(fp, "CRAYJ:[%5d] The number of calls\n", my_rank);
                 fprintf(fp, "CRAYJ:, %6s, %3s, %10s, %10s, %10s, %10s, %10s, %10s\n", "rank", "tid", 
                         "GEQRT", "TSQRT", "LARFB", "SSRFB", "TASKWAIT", "NOTMYTURN");
-#  if ! defined(CRAYJ_TIMING_FILE_PER_RANK)
             }
-#  endif
+
             if (my_rank != 0) {
                 MPI_Recv(&dummy, 1, MPI_INT, my_rank-1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
@@ -1788,16 +1769,14 @@ void Hybrid_tile_QR
                 MPI_Send(&dummy, 1, MPI_INT, my_rank+1, tag, MPI_COMM_WORLD);
             }
             MPI_Barrier(MPI_COMM_WORLD);
-#  if ! defined(CRAYJ_TIMING_FILE_PER_RANK)
+
             if (my_rank == 0) {
-#  endif
                 fputc('\n', fp);
                 fprintf(fp, "CRAYJ:[%5d] MPI_Bcast Timing [sec.]\n", my_rank);
                 fprintf(fp, "CRAYJ:, %6s, %10s, %10s, %10s, %10s\n", 
                         "rank", "send time", "send count", "recv time", "recv count");
-#  if ! defined(CRAYJ_TIMING_FILE_PER_RANK)
             }
-#  endif
+
             if (my_rank != 0) {
                 MPI_Recv(&dummy, 1, MPI_INT, my_rank-1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
@@ -1812,11 +1791,6 @@ void Hybrid_tile_QR
 
 	} // end if (NULL != fp)
 
-#  if defined(CRAYJ_TIMING_FILE_PER_RANK)
-	if (NULL != fp) {
-            fclose(fp);
-	}
-#  endif
     } // end FILE *fp;
 //crayj<<<
 #endif
