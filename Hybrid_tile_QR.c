@@ -55,7 +55,7 @@ static MPI_Datatype MPI_TILE;
 //crayj<<<
 #if defined(CRAYJ_TIMING)
 //crayj>>>
-#  define CRAYJ_MAX_THREADS 32
+#  define CRAYJ_MAX_THREADS 16
 static double crayj_elapsed[CRAYJ_MAX_THREADS][8];
 static int    crayj_ncalls [CRAYJ_MAX_THREADS][8];
 
@@ -82,7 +82,7 @@ static unsigned long *send_gis;
 #endif
 //crayj>>>
 
-// building blocks for communication threads
+// f blocks for communication threads
 static
 double *
 sender_get_next_buffer(
@@ -326,20 +326,11 @@ void Hybrid_tile_QR
     // 共有データ
 #if ! defined(CRAYJ_USE_VOLATILE)
     TilSch_List_t sche_list;
-#  if defined(CRAYJ_TWO_LEVEL_SCHED)
-//crayj>>>
-    TilSch_List_t priority_list;
-//crayj<<<
-#  endif
+
     unsigned char * prog_table;
     int run_flag = 1;
 #else
     volatile TilSch_List_t sche_list;
-#  if defined(CRAYJ_TWO_LEVEL_SCHED)
-//crayj>>>
-    volatile TilSch_List_t priority_list;
-//crayj<<<
-#  endif
     volatile unsigned char * prog_table;
     volatile int run_flag = 1;
 #endif
@@ -390,9 +381,6 @@ void Hybrid_tile_QR
 #  if defined(CRAYJ_USE_COREBLAS)
         printf("CRAYJ:   CRAYJ_USE_COREBLAS\n");
 #  endif
-#  if defined(CRAYJ_TWO_LEVEL_SCHED)
-        printf("CRAYJ:   CRAYJ_TWO_LEVEL_SCHED\n");
-#  endif
 #  if defined(CRAYJ_DYNAMIC_COMM_SCHED)
         printf("CRAYJ:   CRAYJ_DYNAMIC_COMM_SCHED\n");
 #  endif
@@ -401,11 +389,6 @@ void Hybrid_tile_QR
 #endif
 
     TilSch_init(&sche_list,mat_getLTileM(status)*mat_getLTileN(status)*mat_getLTileN(status)/20+100);
-#if defined(CRAYJ_TWO_LEVEL_SCHED)
-//crayj>>>
-    TilSch_init(&priority_list,mat_getLTileM(status)*mat_getLTileN(status)*mat_getLTileN(status)/20+100);
-//crayj<<<
-#endif
     prog_table = calloc(mat_getGTileM(status)*mat_getGTileN(status)*mat_getGTileN(status),1);
 	
     // バッファのポジションを記録
@@ -443,24 +426,12 @@ void Hybrid_tile_QR
     MPI_Type_commit(&MPI_TILE);
 //crayj	signal(SIGSEGV,sigcatch);
 
-#if (! defined(CRAYJ_TWO_LEVEL_SCHED)) && (! defined(CRAYJ_TIMELINE))
+#if (! defined(CRAYJ_TIMELINE))
 #pragma omp parallel shared(sche_list,run_flag) firstprivate(prog_table,buff_pos,glob_YT,buff_table,buff_ticket,buff_table_size)
 #endif
 //crayj>>>
-#if defined(CRAYJ_TWO_LEVEL_SCHED) && defined(CRAYJ_TIMELINE)
 #pragma omp parallel default(shared) shared(sche_list,run_flag)         \
-    shared(priority_list,timebase)                                      \
     firstprivate(prog_table,buff_pos,glob_YT,buff_table,buff_ticket,buff_table_size) 
-#elif defined(CRAYJ_TWO_LEVEL_SCHED) 
-#pragma omp parallel default(shared) shared(sche_list,run_flag)         \
-    shared(priority_list)                                               \
-    firstprivate(prog_table,buff_pos,glob_YT,buff_table,buff_ticket,buff_table_size) 
-#elif defined(CRAYJ_TIMELINE)
-#pragma omp parallel default(shared) shared(sche_list,run_flag)         \
-    shared(timebase)                                                    \
-    firstprivate(prog_table,buff_pos,glob_YT,buff_table,buff_ticket,buff_table_size) 
-#endif
-//crayj<<<
     {
         unsigned long int g_i,g_j,g_k,l_i,l_j,l_k;
         long int ti;
@@ -648,7 +619,7 @@ void Hybrid_tile_QR
                         data.i = 0;
                         data.j = 0;
                         data.k = 0;
-#if ! defined(CRAYJ_TWO_LEVEL_SCHED)
+
                         TilSch_push(&sche_list,data);
 #  if defined(CRAYJ_TIMELINE)
 //crayj>>>
@@ -656,15 +627,7 @@ void Hybrid_tile_QR
                                 MPI_Wtime() - timebase, data.i, data.j, data.k);
 //crayj<<<
 #  endif
-#else
-//crayj>>>
-                        TilSch_push(&priority_list,data);
-#  if defined(CRAYJ_TIMELINE)
-                        fprintf(timeline, "%f, push priority (1) %d %d %d\n", 
-                                MPI_Wtime() - timebase, data.i, data.j, data.k);
-#  endif
-//crayj<<<
-#endif
+
                         __DBGQUEUE__("first",(long int)0,(long int)0,(long int)0,(long int)0,(long int)0,(long int)0);
                     }
                 }
@@ -987,7 +950,7 @@ void Hybrid_tile_QR
                     ttmp = MPI_Wtime();
 //crayj<<<
 #endif
-#if ! defined(CRAYJ_TWO_LEVEL_SCHED)
+
 #pragma omp critical (sche_list)
                     my_turn = TilSch_pop(&sche_list,&data);
 #  if defined(CRAYJ_TIMELINE)
@@ -1000,32 +963,7 @@ void Hybrid_tile_QR
                     }
 //crayj<<<
 #  endif
-#else
-//crayj>>>
-#pragma omp critical (priority_list)
-                    my_turn = TilSch_pop(&priority_list,&data);
-#  if defined(CRAYJ_TIMELINE)
-                    if (my_turn) {
-                        if (NULL != timeline)
-                            fprintf(timeline, "%f, pop priority %d %d %d\n",
-                                    MPI_Wtime() - timebase, data.i, data.j, data.k);
-                        flag_notmyturn = false;
-                    }
-#  endif
-                    if (! my_turn) {
-#pragma omp critical (sche_list)
-                        my_turn = TilSch_pop(&sche_list,&data);
-#  if defined(CRAYJ_TIMELINE)
-                        if (my_turn) {
-                            if (NULL != timeline)
-                                fprintf(timeline, "%f, pop %d %d %d\n",
-                                        MPI_Wtime() - timebase, data.i, data.j, data.k);
-                            flag_notmyturn = false;
-                        }
-#  endif
-                    }
-//crayj<<<
-#endif
+
 #if defined(CRAYJ_TIMING)
 //crayj>>>
                     ela_taskwait += MPI_Wtime() - ttmp;
@@ -1133,7 +1071,7 @@ void Hybrid_tile_QR
                                 data.j = g_j;
                                 data.k = g_k+1;
                                 __DBGQUEUE__("push",g_i,g_j,g_k+1,l_i,l_j,l_k+1);
-#if ! defined(CRAYJ_TWO_LEVEL_SCHED)
+
                                 while(input&&!TilSch_push(&sche_list,data)){}
 #  if defined(CRAYJ_TIMELINE)
 //crayj>>>
@@ -1142,16 +1080,7 @@ void Hybrid_tile_QR
                                             MPI_Wtime() - timebase, g_i, g_j, g_k+1);
 //crayj<<<
 #  endif
-#else
-//crayj>>>
-                                while(input&&!TilSch_push(&priority_list,data)){}
-#  if defined(CRAYJ_TIMELINE)
-                                if (input && NULL != timeline)
-                                    fprintf(timeline, "%f, push priority (2) %d %d %d\n", 
-                                            MPI_Wtime() - timebase, g_i, g_j, g_k+1);
-#  endif
-//crayj<<<
-#endif
+
                             }
                             else
                             {
@@ -1307,7 +1236,7 @@ void Hybrid_tile_QR
                                 data.j = g_j;
                                 data.k = g_k+1;
                                 __DBGQUEUE__("push",g_i,g_j,g_k+1,l_i,l_j,l_k+1);
-#if ! defined(CRAYJ_TWO_LEVEL_SCHED)
+
                                 while(input&&!TilSch_push(&sche_list,data)){}
 #  if defined(CRAYJ_TIMELINE)
 //crayj>>>
@@ -1316,16 +1245,7 @@ void Hybrid_tile_QR
                                             MPI_Wtime() - timebase, g_i, g_j, g_k+1);
 //crayj<<<
 #  endif
-#else
-//crayj>>>
-                                while(input&&!TilSch_push(&priority_list,data)){}
-#  if defined(CRAYJ_TIMELINE)
-                                if (input && NULL != timeline)
-                                    fprintf(timeline, "%f, push priority (3) %d %d %d\n", 
-                                            MPI_Wtime() - timebase, g_i, g_j, g_k+1);
-#  endif
-//crayj<<<
-#endif
+
                             }
                             // 新たなバッファを取得する
                             buff = NULL;
@@ -1614,7 +1534,7 @@ void Hybrid_tile_QR
                             data.j = g_j;
                             data.k = g_k;
                             __DBGQUEUE__("push",g_i+1,g_j,g_k,l_i,l_j,l_k);
-#if ! defined(CRAYJ_TWO_LEVEL_SCHED)
+
                             while(input&&!TilSch_push(&sche_list,data)){}
 #  if defined(CRAYJ_TIMELINE)
 //crayj>>>
@@ -1623,25 +1543,7 @@ void Hybrid_tile_QR
                                         MPI_Wtime() - timebase, g_i+1, g_j, g_k);
 //crayj<<<
 #  endif
-#else
-//crayj>>>
-                            if (data.i == data.j) {
-                                while(input&&!TilSch_push(&priority_list,data)){}
-#  if defined(CRAYJ_TIMELINE)
-                                if (input && NULL != timeline)
-                                    fprintf(timeline, "%f, push priority (4) %d %d %d\n", 
-                                            MPI_Wtime() - timebase, g_i+1, g_j, g_k);
-#  endif
-                            } else {
-                                while(input&&!TilSch_push(&sche_list,data)){}
-#  if defined(CRAYJ_TIMELINE)
-                                if (input && NULL != timeline)
-                                    fprintf(timeline, "%f, push normal (4) %d %d %d\n", 
-                                            MPI_Wtime() - timebase, g_i+1, g_j, g_k);
-#  endif
-                            }
-//crayj<<<
-#endif
+
                         }
                     }
                     // 終了判定
