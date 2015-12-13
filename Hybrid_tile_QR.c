@@ -21,10 +21,6 @@
 #include "tile_kernel.h"
 #include <signal.h>
 
-/************************************************
-	ssrfb分割版
-************************************************/
-
 #define __TILE_BLOCK__ 10
 
 #define M_p(MATRIX,i,j) ((MATRIX)+(mat_getMatPos(status,(i),(j))))
@@ -303,9 +299,7 @@ recver_postprocess(
     }
 }
 
-static
-int
-compare(const void *px, const void *py)
+static int compare(const void *px, const void *py)
 {
     unsigned long const x = *(unsigned long *)px;
     unsigned long const y = *(unsigned long *)py;
@@ -407,9 +401,6 @@ void Hybrid_tile_QR
 #  endif
 #  if defined(CRAYJ_TWO_LEVEL_SCHED)
         printf("CRAYJ:   CRAYJ_TWO_LEVEL_SCHED\n");
-#  endif
-#  if defined(CRAYJ_FREE_HEAP)
-        printf("CRAYJ:   CRAYJ_FREE_HEAP\n");
 #  endif
 #  if defined(CRAYJ_DYNAMIC_COMM_SCHED)
         printf("CRAYJ:   CRAYJ_DYNAMIC_COMM_SCHED\n");
@@ -985,9 +976,9 @@ void Hybrid_tile_QR
                 free(send_gis);
 //crayj<<<
 #endif
-#  if defined(CRAYJ_FREE_HEAP)
+
                 free(comm_buff);
-#  endif
+
             }
             ///////////////////////////////////////////////////////////////////////////
             // 通信用スレッド End
@@ -1735,15 +1726,12 @@ void Hybrid_tile_QR
         if (NULL != timeline) fclose(timeline);
 //crayj<<<
 #endif
-#if defined(CRAYJ_FREE_HEAP)
-//crayj>>>
+
         free(prT);
         free(geY);
-//crayj<<<
-#endif
+
     }
-#if defined(CRAYJ_FREE_HEAP)
-//crayj>>>
+
     free(T);
     free(glob_YT);
     free(buff_ticket);
@@ -1751,8 +1739,7 @@ void Hybrid_tile_QR
 
     free(buff_pos);
     free(prog_table);
-//crayj<<<
-#endif
+
 #if defined(CRAYJ_TIMING)
 //crayj>>>
     {   FILE *fp;
