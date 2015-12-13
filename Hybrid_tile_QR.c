@@ -1,8 +1,6 @@
-//crayj>>>
-#if defined(CRAYJ_USE_COREBLAS)
 #  include "plasma.h"
 #  include "core_blas.h"
-#endif
+
 #if defined(CRAYJ_TIMING_FILE_PER_RANK)
 #  if ! defined(CRAYJ_TIMING)
 #    define CRAYJ_TIMING 1
@@ -12,7 +10,6 @@
 #  include <stdbool.h>
 #endif
 
-//crayj<<<
 #include "Hybrid_tile_QR.h"
 #include "TileSch.h"
 #include "tile_kernel.h"
@@ -313,11 +310,7 @@ void Hybrid_tile_QR
     ,double * A,double * TAU
 //	,double * T
     ,int my_rank,int Proc_num
-#if defined(CRAYJ_USE_COREBLAS)
-//crayj>>>
     ,int ib
-//crayj<<<
-#endif
     )
 {
     /***************************************************************************
@@ -377,9 +370,6 @@ void Hybrid_tile_QR
 #  endif
 #  if defined(CRAYJ_USE_VOLATILE)
         printf("CRAYJ:   CRAYJ_USE_VOLATILE\n");
-#  endif
-#  if defined(CRAYJ_USE_COREBLAS)
-        printf("CRAYJ:   CRAYJ_USE_COREBLAS\n");
 #  endif
 #  if defined(CRAYJ_DYNAMIC_COMM_SCHED)
         printf("CRAYJ:   CRAYJ_DYNAMIC_COMM_SCHED\n");
@@ -452,11 +442,8 @@ void Hybrid_tile_QR
         double * geY;
         double * prT;
         double * comm_buff;
-#if defined(CRAYJ_USE_COREBLAS)
-//crayj>>>
         int retval;
-//crayj<<<
-#endif
+
 #if defined(CRAYJ_TIMELINE)
 //crayj>>>
         char filename[CRAYJ_FILENAME_MAX];
@@ -1018,17 +1005,7 @@ void Hybrid_tile_QR
                             ttmp = MPI_Wtime();
 //crayj<<<
 #endif
-#if ! defined(CRAYJ_USE_COREBLAS)
-                            tile_dgeqrt(mat_getTileM(status),mat_getTileN(status),__TILE_BLOCK__
-                                        ,M_p(A,l_i,l_j),mat_getTileM(status)
-                                        ,V_p(TAU,l_i,l_j)
-                                        ,geY
-                                        ,prT
-                                        ,mat_getTileM(status)
-                                        ,work
-                                );
-#else
-//crayj>>>
+
                             retval = CORE_dgeqrt(mat_getTileM(status), mat_getTileN(status), ib,
                                                  M_p(A,l_i,l_j), mat_getTileM(status),
                                                  prT, mat_getTileM(status),
@@ -1044,8 +1021,7 @@ void Hybrid_tile_QR
                                         my_rank, mat_getTileM(status), mat_getTileN(status), ib);
                                 MPI_Abort(MPI_COMM_WORLD, 1);
                             }
-//crayj<<<
-#endif
+
 #if defined(CRAYJ_TIMING)
 //crayj>>>
                             ela_geqrt += MPI_Wtime() - ttmp;
@@ -1118,11 +1094,8 @@ void Hybrid_tile_QR
                             buff_Y = buff;
                             buff_T = buff+mat_TileSize(status);
 
-#if ! defined(CRAYJ_USE_COREBLAS)
-                            cblas_dcopy(mat_TileSize(status),geY,1,buff_Y,1);
-#else
+
                             cblas_dcopy(mat_TileSize(status),M_p(A,l_i,l_j),1,buff_Y,1);
-#endif
                             cblas_dcopy(mat_TileSize(status),prT,1,buff_T,1);
                             ticket = 0;
                             for(ti = g_i+1; ti < mat_getGTileN(status); ti++)
@@ -1186,17 +1159,7 @@ void Hybrid_tile_QR
                             ttmp = MPI_Wtime();
 //crayj<<<
 #endif
-#if ! defined(CRAYJ_USE_COREBLAS)
-                            tile_dtsqrt(mat_getTileM(status),mat_getTileN(status),__TILE_BLOCK__
-                                        ,M_p(A,l_i,l_j),mat_getTileM(status)
-                                        ,M_p(A,l_k,l_j),mat_getTileM(status)
-                                        ,V_p(TAU,l_k,l_j)
-                                        ,prT
-                                        ,mat_getTileM(status)
-                                        ,work
-                                );
-#else
-//crayj>>>
+
                             retval = CORE_dtsqrt(mat_getTileM(status), mat_getTileN(status), ib,
                                                  M_p(A,l_i,l_j), mat_getTileM(status),
                                                  M_p(A,l_k,l_j), mat_getTileM(status),
@@ -1209,8 +1172,7 @@ void Hybrid_tile_QR
                                         my_rank, retval);
                                 MPI_Abort(MPI_COMM_WORLD, 1);
                             }
-//crayj<<<
-#endif
+
 #if defined(CRAYJ_TIMING)
 //crayj>>>
                             ela_tsqrt += MPI_Wtime() - ttmp;
@@ -1338,15 +1300,7 @@ void Hybrid_tile_QR
                             ttmp = MPI_Wtime();
 //crayj<<<
 #endif
-#if ! defined(CRAYJ_USE_COREBLAS)
-                            tile_dlarfb(mat_getTileM(status),mat_getTileN(status)
-                                        ,M_p(A,l_i,l_j),mat_getTileM(status)
-                                        ,buff_Y
-                                        ,buff_T,mat_getTileM(status)
-                                        ,work
-                                );
-#else
-//crayj>>>
+
                             retval = CORE_dormqr(PlasmaLeft, PlasmaTrans,
                                                  mat_getTileM(status), mat_getTileN(status),
                                                  mat_getTileM(status), ib,
@@ -1360,8 +1314,7 @@ void Hybrid_tile_QR
                                         my_rank, retval);
                                 MPI_Abort(MPI_COMM_WORLD, 1);
                             }
-//crayj<<<
-#endif
+
 #if defined(CRAYJ_TIMING)
 //crayj>>>
                             ela_larfb += MPI_Wtime() - ttmp;
@@ -1427,20 +1380,7 @@ void Hybrid_tile_QR
                             ttmp = MPI_Wtime();
 //crayj<<<
 #endif
-#if ! defined(CRAYJ_USE_COREBLAS)
-/*							tile_dssrfb(mat_getTileM(status),mat_getTileN(status)
-                                                        ,M_p(A,l_i,l_j),M_p(A,l_k,l_j),mat_getTileM(status)
-                                                        ,buff_Y,buff_T,mat_getTileM(status)
-                                                        ,work
-							);
-*/
-                            tile_dssrfb_head(mat_getTileM(status),mat_getTileN(status)
-                                             ,M_p(A,l_i,l_j),M_p(A,l_k,l_j),mat_getTileM(status)
-                                             ,buff_Y,buff_T,mat_getTileM(status)
-                                             ,work
-                                );
-#else
-//crayj>>>
+
                             retval = CORE_dtsmqr(PlasmaLeft, PlasmaTrans,
                                                  mat_getTileM(status), mat_getTileN(status), mat_getTileM(status),
                                                  mat_getTileN(status), mat_getTileN(status), ib,
@@ -1454,8 +1394,7 @@ void Hybrid_tile_QR
                                         my_rank, retval);
                                 MPI_Abort(MPI_COMM_WORLD, 1);
                             }
-//crayj<<<
-#endif
+
 #if defined(CRAYJ_TIMING)
 //crayj>>>
                             ela_ssrfb += MPI_Wtime() - ttmp;
@@ -1495,22 +1434,6 @@ void Hybrid_tile_QR
 #endif
 
                             }
-							
-#if ! defined(CRAYJ_USE_COREBLAS)
-#  if defined(CRAYJ_TIMING)
-//crayj>>>
-                            ttmp = MPI_Wtime();
-//crayj<<<
-#  endif
-                            tile_dssrfb_tail(mat_getTileM(status),mat_getTileN(status)
-                                             ,M_p(A,l_k,l_j),mat_getTileM(status),buff_Y,work
-                                );
-#  if defined(CRAYJ_TIMING)
-//crayj>>>
-                            ela_ssrfb += MPI_Wtime() - ttmp;
-//crayj<<<
-#  endif
-#endif
 							
 #pragma omp critical (buff_pos)
                             {
