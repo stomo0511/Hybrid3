@@ -2,9 +2,6 @@
 #if defined(CRAYJ_USE_COREBLAS)
 #  include "plasma.h"
 #  include "core_blas.h"
-#  if ! defined(CRAYJ_REMOVE_REDUNDANT_DLARFT)
-#    define CRAYJ_REMOVE_REDUNDANT_DLARFT
-#  endif
 #endif
 #if defined(CRAYJ_TIMING_FILE_PER_RANK)
 #  if ! defined(CRAYJ_TIMING)
@@ -386,9 +383,6 @@ void Hybrid_tile_QR
 #  endif
 #  if defined(CRAYJ_TIMELINE)
         printf("CRAYJ:   CRAYJ_TIMELINE\n");
-#  endif
-#  if defined(CRAYJ_REMOVE_REDUNDANT_DLARFT)
-        printf("CRAYJ:   CRAYJ_REMOVE_REDUNDANT_DLARFT\n");
 #  endif
 #  if defined(CRAYJ_USE_OMP_FLUSH)
         printf("CRAYJ:   CRAYJ_USE_OMP_FLUSH\n");
@@ -1197,17 +1191,7 @@ void Hybrid_tile_QR
                             }
                             buff_Y = buff;
                             buff_T = buff+mat_TileSize(status);
-#if ! defined(CRAYJ_REMOVE_REDUNDANT_DLARFT)
-                            // T行列の作成
-                            tile_dlarft(mat_getTileM(status),mat_getTileN(status),1
-                                        ,geY
-                                        ,mat_getTileM(status)
-                                        ,V_p(TAU,l_i,l_j)
-                                        ,prT
-                                        ,mat_getTileM(status)
-                                        ,work
-                                );
-#endif
+
 #if ! defined(CRAYJ_USE_COREBLAS)
                             cblas_dcopy(mat_TileSize(status),geY,1,buff_Y,1);
 #else
@@ -1363,17 +1347,6 @@ void Hybrid_tile_QR
                             }
                             buff_Y = buff;
                             buff_T = buff+mat_TileSize(status);
-#if ! defined(CRAYJ_REMOVE_REDUNDANT_DLARFT)
-                            // T行列の作成
-                            tile_dlarft(mat_getTileM(status),mat_getTileN(status),1
-                                        ,M_p(A,l_k,l_j),mat_getTileM(status)
-                                        ,V_p(TAU,l_k,l_j)
-//								,M_p(T,l_k,l_j)
-                                        ,prT
-                                        ,mat_getTileM(status)
-                                        ,work
-                                );
-#endif
 		
                             cblas_dcopy(mat_TileSize(status),M_p(A,l_k,l_j),1,buff_Y,1);
                             cblas_dcopy(mat_TileSize(status),prT,1,buff_T,1);
