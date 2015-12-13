@@ -317,28 +317,14 @@ void Hybrid_tile_QR
 		グローバル変数定義
     ***************************************************************************/
     // 共有データ
-#if ! defined(CRAYJ_USE_VOLATILE)
     TilSch_List_t sche_list;
 
     unsigned char * prog_table;
     int run_flag = 1;
-#else
-    volatile TilSch_List_t sche_list;
-    volatile unsigned char * prog_table;
-    volatile int run_flag = 1;
-#endif
-	
-#if ! defined(CRAYJ_USE_VOLATILE)
     long int * buff_pos;
     long int buff_head = 0;
     long int buff_tail = 0;
-#else
-//crayj>>>
-    volatile long int * buff_pos;
-    volatile long int buff_head = 0;
-    volatile long int buff_tail = 0;
-//crayj<<<
-#endif
+
 	
     double * glob_YT;
     long int * buff_table;
@@ -367,9 +353,6 @@ void Hybrid_tile_QR
 #  endif
 #  if defined(CRAYJ_USE_OMP_FLUSH)
         printf("CRAYJ:   CRAYJ_USE_OMP_FLUSH\n");
-#  endif
-#  if defined(CRAYJ_USE_VOLATILE)
-        printf("CRAYJ:   CRAYJ_USE_VOLATILE\n");
 #  endif
 #  if defined(CRAYJ_DYNAMIC_COMM_SCHED)
         printf("CRAYJ:   CRAYJ_DYNAMIC_COMM_SCHED\n");
